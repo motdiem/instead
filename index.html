@@ -401,7 +401,9 @@
 
         .edit-item button {
             padding: 10px 15px;
-            font-size: 0.8rem;
+            font-size: 1.2rem;
+            min-width: auto;
+            line-height: 1;
         }
 
         .add-item-btn {
@@ -454,6 +456,9 @@
         <!-- Edit Screen -->
         <div class="screen" id="editScreen">
             <div class="edit-section">
+                <div style="margin-bottom: 30px; padding: 15px; background: var(--bg-secondary); border-left: 4px solid var(--accent); font-size: 0.85rem; line-height: 1.5;">
+                    <strong>Note:</strong> All changes are saved locally on your device. They are not synced to any server.
+                </div>
                 <div class="edit-category">
                     <div class="edit-category-title">1 Minute</div>
                     <ul class="edit-list" id="edit-1"></ul>
@@ -635,7 +640,7 @@
                     li.className = 'edit-item';
                     li.innerHTML = `
                         <input type="text" value="${activity}" onchange="updateActivity(${time}, ${index}, this.value)">
-                        <button onclick="deleteActivity(${time}, ${index})">DELETE</button>
+                        <button onclick="deleteActivity(${time}, ${index})" title="Delete">🗑️</button>
                     `;
                     listEl.appendChild(li);
                 });
