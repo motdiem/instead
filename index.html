@@ -459,6 +459,23 @@
                 <div style="margin-bottom: 30px; padding: 15px; background: var(--bg-secondary); border-left: 4px solid var(--accent); font-size: 0.85rem; line-height: 1.5;">
                     <strong>Note:</strong> All changes are saved locally on your device. They are not synced to any server.
                 </div>
+                
+                <!-- Import/Export Section -->
+                <div style="margin-bottom: 30px; padding: 20px; border: 2px solid var(--text-secondary); background: var(--bg-secondary);">
+                    <div style="font-weight: 600; margin-bottom: 15px; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 0.05em;">Import / Export Activities</div>
+                    <div style="margin-bottom: 10px;">
+                        <button onclick="exportActivities()" style="margin-right: 10px;">EXPORT</button>
+                        <button onclick="importActivities()">IMPORT</button>
+                    </div>
+                    <textarea id="importExportText" 
+                        placeholder="Paste your exported activities here to import them..."
+                        style="width: 100%; min-height: 100px; padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; border: 2px solid var(--text-primary); background: var(--bg-primary); color: var(--text-primary); resize: vertical; margin-top: 10px;"
+                    ></textarea>
+                    <div style="font-size: 0.75rem; margin-top: 8px; opacity: 0.7;">
+                        Click EXPORT to copy your activities as text. Paste exported text here and click IMPORT to restore.
+                    </div>
+                </div>
+                
                 <div class="edit-category">
                     <div class="edit-category-title">1 Minute</div>
                     <ul class="edit-list" id="edit-1"></ul>
@@ -678,6 +695,58 @@
             const lastInput = inputs[inputs.length - 1];
             lastInput.focus();
             lastInput.select();
+        }
+
+        // Export activities to text
+        function exportActivities() {
+            const exportText = JSON.stringify(activities, null, 2);
+            const textarea = document.getElementById('importExportText');
+            textarea.value = exportText;
+            textarea.select();
+            
+            // Try to copy to clipboard
+            try {
+                document.execCommand('copy');
+                alert('Activities copied to clipboard! You can also manually copy from the text area.');
+            } catch (err) {
+                alert('Activities are in the text area below. Copy them manually.');
+            }
+        }
+
+        // Import activities from text
+        function importActivities() {
+            const textarea = document.getElementById('importExportText');
+            const importText = textarea.value.trim();
+            
+            if (!importText) {
+                alert('Please paste your exported activities in the text area first.');
+                return;
+            }
+            
+            try {
+                const importedActivities = JSON.parse(importText);
+                
+                // Validate structure
+                const requiredKeys = ['1', '5', '10', '20', '40'];
+                const hasAllKeys = requiredKeys.every(key => 
+                    importedActivities[key] && Array.isArray(importedActivities[key])
+                );
+                
+                if (!hasAllKeys) {
+                    throw new Error('Invalid format: missing required time categories');
+                }
+                
+                // Confirm before replacing
+                if (confirm('This will replace all your current activities. Continue?')) {
+                    activities = importedActivities;
+                    saveActivities();
+                    renderEditScreen();
+                    textarea.value = '';
+                    alert('Activities imported successfully!');
+                }
+            } catch (err) {
+                alert('Import failed: Invalid format. Please make sure you pasted exported activities correctly.\n\nError: ' + err.message);
+            }
         }
 
         // Select time and show activity

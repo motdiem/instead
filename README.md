@@ -11,6 +11,7 @@ Instead presents you with 5 time options (1, 5, 10, 20, or 40+ minutes) and rand
 - **Time-based activity selection**: Choose your available time and get a random activity suggestion
 - **Fully offline**: Works without internet connection after first load
 - **Customizable**: Edit, add, or delete activities in each time category
+- **Import/Export**: Save your activity lists as text to backup or transfer between devices
 - **Progressive Web App**: Installable on mobile and desktop devices
 - **Persistent storage**: Your custom activities are saved locally
 - **Clean design**: Solarized Light color scheme with Swiss brutalist aesthetics
@@ -87,7 +88,11 @@ The HTML contains three main screens that are toggled via JavaScript:
 </div>
 
 <div class="screen" id="editScreen">
-  <!-- Edit mode: lists of activities organized by time category -->
+  <!-- Edit mode: 
+       - Import/Export textarea and buttons
+       - Lists of activities organized by time category 
+       - Delete (🗑️) and Add buttons for each activity
+  -->
 </div>
 ```
 
@@ -104,8 +109,9 @@ The HTML contains three main screens that are toggled via JavaScript:
 **Key style classes**:
 - `.time-button`: The 5 main time selection cards
 - `.result-box`: Container for activity results
-- `.edit-toggle`: The discreet edit button (bottom-right)
+- `.edit-toggle`: The discreet edit button (bottom-right, hidden on result screen)
 - `.edit-section`: Edit mode interface
+- `.edit-item`: Individual activity row with input and delete button (🗑️ emoji)
 
 ### 3. JavaScript Logic (in index.html `<script>` tag)
 
@@ -173,6 +179,17 @@ let isEditMode = false;        // Whether edit mode is active
 - Persists the activities object to localStorage
 - Called after any edit operation
 
+**`exportActivities()`**
+- Converts activities object to formatted JSON string
+- Displays in textarea and attempts to copy to clipboard
+- Uses `JSON.stringify(activities, null, 2)` for readable formatting
+
+**`importActivities()`**
+- Reads JSON text from textarea
+- Validates format and required keys
+- Asks for confirmation before replacing existing data
+- Updates activities and re-renders edit screen
+
 #### localStorage Usage
 
 ```javascript
@@ -184,6 +201,103 @@ activities = JSON.parse(localStorage.getItem('activities')) || defaultActivities
 ```
 
 All activity customizations are stored in the browser's localStorage under the key `'activities'`. This allows the app to remember user changes across sessions without requiring a backend.
+
+#### Import/Export System
+
+The import/export feature allows users to backup and transfer their activity lists between devices or browsers.
+
+**Export Process**:
+
+```javascript
+function exportActivities() {
+  const exportText = JSON.stringify(activities, null, 2);
+  const textarea = document.getElementById('importExportText');
+  textarea.value = exportText;
+  textarea.select();
+  
+  try {
+    document.execCommand('copy');
+    alert('Activities copied to clipboard!');
+  } catch (err) {
+    alert('Activities are in the text area below. Copy them manually.');
+  }
+}
+```
+
+1. Converts the activities object to a JSON string with 2-space indentation for readability
+2. Displays the JSON in a textarea
+3. Attempts to copy to clipboard using `document.execCommand('copy')`
+4. Falls back to manual copy if clipboard access fails
+
+**Import Process**:
+
+```javascript
+function importActivities() {
+  const importText = textarea.value.trim();
+  
+  // Parse JSON
+  const importedActivities = JSON.parse(importText);
+  
+  // Validate structure
+  const requiredKeys = ['1', '5', '10', '20', '40'];
+  const hasAllKeys = requiredKeys.every(key => 
+    importedActivities[key] && Array.isArray(importedActivities[key])
+  );
+  
+  if (!hasAllKeys) {
+    throw new Error('Invalid format');
+  }
+  
+  // Confirm and replace
+  if (confirm('This will replace all your current activities. Continue?')) {
+    activities = importedActivities;
+    saveActivities();
+    renderEditScreen();
+  }
+}
+```
+
+1. Reads text from textarea
+2. Attempts to parse as JSON
+3. Validates that all required time categories exist and are arrays
+4. Asks user for confirmation (destructive operation)
+5. Replaces current activities and saves to localStorage
+6. Re-renders edit screen with new data
+
+**Validation checks**:
+- Must be valid JSON
+- Must contain keys: '1', '5', '10', '20', '40'
+- Each key must map to an array (not checked: array contents)
+
+**Error handling**:
+- JSON parse errors are caught and shown to user
+- Missing required keys trigger validation error
+- User confirmation prevents accidental data loss
+
+**Export format example**:
+
+```json
+{
+  "1": [
+    "Smile",
+    "Relax neck and shoulders",
+    "Stand",
+    "Breathe"
+  ],
+  "5": [
+    "Coffee",
+    "Water",
+    "Draw"
+  ]
+}
+```
+
+**Use cases**:
+- **Backup**: Export activities before major edits
+- **Transfer**: Move configuration between devices
+- **Share**: Share custom activity lists with others
+- **Restore**: Keep default export to reset later
+- **Version control**: Save different activity sets for different contexts
 
 ### 4. Service Worker (service-worker.js)
 
@@ -447,6 +561,16 @@ All modern browsers support PWAs and service workers.
 - Icons should be at least 192×192px
 - Clear Safari cache and re-add to home screen
 
+### Import/Export Not Working
+
+**Problem**: Cannot export or import fails
+
+**Solution**:
+- **Export**: Check browser console for errors; copy manually from textarea if auto-copy fails
+- **Import validation fails**: Ensure JSON is valid and contains all required keys (1, 5, 10, 20, 40)
+- **Import confirmation**: Make sure to click "OK" on the confirmation dialog
+- **Clipboard access**: Some browsers block `execCommand('copy')` - just copy manually from textarea
+
 ## Security Considerations
 
 - **No backend**: All data stays on device
@@ -457,17 +581,16 @@ All modern browsers support PWAs and service workers.
 ## Future Enhancement Ideas
 
 - Multiple activity lists/profiles
-- Import/export functionality
 - Activity history tracking
 - Difficulty ratings for activities
 - Random time suggestion ("I don't know how much time I have")
 - Dark mode toggle
 - Activity categories/tags
-- Shareable activity lists
+- Shareable activity lists (via URL encoding)
 
 ## License
 
-This code is provided as-is for personal or commercial use under and MIT License
+This code is provided as-is for personal or commercial use under the MIT License.
 
 ## Credits
 
