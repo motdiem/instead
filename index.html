@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#fdf6e3">
+    <meta name="description" content="Instead - Quick decision maker for choosing activities based on available time">
+    <title>Instead</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #fdf6e3;
+            --bg-secondary: #eee8d5;
+            --text-primary: #073642;
+            --text-secondary: #586e75;
+            --accent: #dc322f;
+            --accent-alt: #268bd2;
+            --grid-gap: 2px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(7,54,66,0.03) 49px, rgba(7,54,66,0.03) 50px),
+                repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(7,54,66,0.03) 49px, rgba(7,54,66,0.03) 50px);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        header {
+            border: 4px solid var(--text-primary);
+            padding: 30px;
+            margin-bottom: 40px;
+            position: relative;
+            background: var(--bg-primary);
+            animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        h1 {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: clamp(2rem, 6vw, 4rem);
+            line-height: 0.9;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            animation: textReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+        }
+
+        @keyframes textReveal {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .subtitle {
+            font-size: clamp(0.85rem, 1.5vw, 1rem);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            animation: textReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: var(--grid-gap);
+            margin-bottom: 20px;
+        }
+
+        .time-button {
+            border: 4px solid var(--text-primary);
+            padding: 30px 20px;
+            background: var(--bg-primary);
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .time-button:nth-child(1) { animation-delay: 0.1s; }
+        .time-button:nth-child(2) { animation-delay: 0.2s; }
+        .time-button:nth-child(3) { animation-delay: 0.3s; }
+        .time-button:nth-child(4) { animation-delay: 0.4s; }
+        .time-button:nth-child(5) { animation-delay: 0.5s; }
+
+        .time-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 4px;
+            background: var(--accent);
+            transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .time-button:hover {
+            transform: translate(-4px, -4px);
+            box-shadow: 8px 8px 0 var(--accent);
+        }
+
+        .time-button:hover::before {
+            width: 100%;
+        }
+
+        .time-button:active {
+            transform: translate(0, 0);
+            box-shadow: 0 0 0 var(--accent);
+        }
+
+        .time-number {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 2.5rem;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .time-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .result-box {
+            border: 4px solid var(--text-primary);
+            padding: 40px;
+            background: var(--bg-primary);
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .result-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--accent);
+        }
+
+        .activity-title {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            line-height: 1;
+            letter-spacing: -0.01em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 20px;
+            animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .activity-time {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 4px solid var(--text-primary);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 var(--text-primary);
+        }
+
+        button:active {
+            transform: translate(0, 0);
+            box-shadow: 0 0 0 var(--text-primary);
+        }
+
+        button.primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        button.primary:hover {
+            box-shadow: 4px 4px 0 var(--text-primary);
+        }
+
+        .offline-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: var(--accent);
+            color: var(--bg-primary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 2px solid var(--text-primary);
+            display: none;
+            z-index: 1000;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .offline-indicator.show {
+            display: block;
+        }
+
+        .edit-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 2px solid var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            opacity: 0.4;
+        }
+
+        .edit-toggle:hover {
+            opacity: 1;
+            background: var(--bg-secondary);
+        }
+
+        .edit-toggle.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+            opacity: 1;
+        }
+
+        .edit-section {
+            border: 4px solid var(--text-primary);
+            padding: 30px;
+            margin-bottom: 30px;
+            background: var(--bg-primary);
+        }
+
+        .edit-category {
+            margin-bottom: 30px;
+        }
+
+        .edit-category:last-child {
+            margin-bottom: 0;
+        }
+
+        .edit-category-title {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .edit-list {
+            list-style: none;
+        }
+
+        .edit-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .edit-item input {
+            flex: 1;
+            padding: 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            border: 2px solid var(--text-primary);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .edit-item input:focus {
+            border-color: var(--accent);
+            background: var(--bg-secondary);
+        }
+
+        .edit-item button {
+            padding: 10px 15px;
+            font-size: 0.8rem;
+        }
+
+        .add-item-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 20px;
+            }
+
+            .time-button {
+                padding: 25px 15px;
+            }
+
+            .result-box {
+                padding: 30px 20px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-indicator" id="offlineIndicator">● OFFLINE</div>
+    <button class="edit-toggle" id="editToggle" onclick="toggleEditMode()">EDIT</button>
+    
+    <div class="container">
+        <header>
+            <h1>INSTEAD</h1>
+            <div class="subtitle">CHOOSE YOUR AVAILABLE TIME TO GET AN ACTIVITY</div>
+        </header>
+
+        <!-- Edit Screen -->
+        <div class="screen" id="editScreen">
+            <div class="edit-section">
+                <div class="edit-category">
+                    <div class="edit-category-title">1 Minute</div>
+                    <ul class="edit-list" id="edit-1"></ul>
+                    <button class="add-item-btn" onclick="addActivity(1)">+ ADD</button>
+                </div>
+                <div class="edit-category">
+                    <div class="edit-category-title">5 Minutes</div>
+                    <ul class="edit-list" id="edit-5"></ul>
+                    <button class="add-item-btn" onclick="addActivity(5)">+ ADD</button>
+                </div>
+                <div class="edit-category">
+                    <div class="edit-category-title">10 Minutes</div>
+                    <ul class="edit-list" id="edit-10"></ul>
+                    <button class="add-item-btn" onclick="addActivity(10)">+ ADD</button>
+                </div>
+                <div class="edit-category">
+                    <div class="edit-category-title">20 Minutes</div>
+                    <ul class="edit-list" id="edit-20"></ul>
+                    <button class="add-item-btn" onclick="addActivity(20)">+ ADD</button>
+                </div>
+                <div class="edit-category">
+                    <div class="edit-category-title">40+ Minutes</div>
+                    <ul class="edit-list" id="edit-40"></ul>
+                    <button class="add-item-btn" onclick="addActivity(40)">+ ADD</button>
+                </div>
+            </div>
+            <button class="primary" onclick="toggleEditMode()">DONE</button>
+        </div>
+
+        <!-- Time Selection Screen -->
+        <div class="screen active" id="timeScreen">
+            <div class="time-grid">
+                <div class="time-button" onclick="selectTime(1)">
+                    <div class="time-number">1</div>
+                    <div class="time-label">Minute</div>
+                </div>
+                <div class="time-button" onclick="selectTime(5)">
+                    <div class="time-number">5</div>
+                    <div class="time-label">Minutes</div>
+                </div>
+                <div class="time-button" onclick="selectTime(10)">
+                    <div class="time-number">10</div>
+                    <div class="time-label">Minutes</div>
+                </div>
+                <div class="time-button" onclick="selectTime(20)">
+                    <div class="time-number">20</div>
+                    <div class="time-label">Minutes</div>
+                </div>
+                <div class="time-button" onclick="selectTime(40)">
+                    <div class="time-number">40+</div>
+                    <div class="time-label">Minutes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div class="screen" id="resultScreen">
+            <div class="result-box">
+                <div class="activity-title" id="activityTitle">ACTIVITY</div>
+                <div class="activity-time" id="activityTime">Time category</div>
+                <div class="action-buttons">
+                    <button class="primary" onclick="selectTime(currentTime)">ANOTHER</button>
+                    <button onclick="resetApp()">RESTART</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Default activity database
+        const defaultActivities = {
+            1: [
+                "Smile",
+                "Relax neck and shoulders",
+                "Stand",
+                "Breathe"
+            ],
+            5: [
+                "Coffee",
+                "Water",
+                "Draw",
+                "Color",
+                "Duolingo",
+                "Origami",
+                "Read an article",
+                "Listen to a song",
+                "Takeout the trash",
+                "Stretch to touch toes"
+            ],
+            10: [
+                "Meditate",
+                "Arabic",
+                "Japanese",
+                "Hearthstone",
+                "Write in diary",
+                "Clean a room",
+                "Play piano",
+                "Take a shower"
+            ],
+            20: [
+                "Learn something",
+                "Yoga",
+                "Write something",
+                "Cook something",
+                "Read in a book",
+                "Nap",
+                "Short walk"
+            ],
+            40: [
+                "Run",
+                "Swim",
+                "Sew",
+                "Clean the house"
+            ]
+        };
+
+        // Load activities from localStorage or use defaults
+        let activities = JSON.parse(localStorage.getItem('activities')) || JSON.parse(JSON.stringify(defaultActivities));
+        let currentTime = null;
+        let isEditMode = false;
+
+        // Save activities to localStorage
+        function saveActivities() {
+            localStorage.setItem('activities', JSON.stringify(activities));
+        }
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registered');
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed:', error);
+                    });
+            });
+        }
+
+        // Online/Offline detection
+        function updateOnlineStatus() {
+            const offlineIndicator = document.getElementById('offlineIndicator');
+            if (!navigator.onLine) {
+                offlineIndicator.classList.add('show');
+            } else {
+                offlineIndicator.classList.remove('show');
+            }
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+
+        // Toggle edit mode
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const editToggle = document.getElementById('editToggle');
+            
+            if (isEditMode) {
+                editToggle.classList.add('active');
+                editToggle.textContent = 'DONE';
+                renderEditScreen();
+                showScreen('editScreen');
+            } else {
+                editToggle.classList.remove('active');
+                editToggle.textContent = 'EDIT';
+                showScreen('timeScreen');
+            }
+        }
+
+        // Render edit screen
+        function renderEditScreen() {
+            Object.keys(activities).forEach(time => {
+                const listEl = document.getElementById(`edit-${time}`);
+                listEl.innerHTML = '';
+                
+                activities[time].forEach((activity, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'edit-item';
+                    li.innerHTML = `
+                        <input type="text" value="${activity}" onchange="updateActivity(${time}, ${index}, this.value)">
+                        <button onclick="deleteActivity(${time}, ${index})">DELETE</button>
+                    `;
+                    listEl.appendChild(li);
+                });
+            });
+        }
+
+        // Update activity text
+        function updateActivity(time, index, newValue) {
+            if (newValue.trim()) {
+                activities[time][index] = newValue.trim();
+                saveActivities();
+            }
+        }
+
+        // Delete activity
+        function deleteActivity(time, index) {
+            if (activities[time].length > 1) {
+                activities[time].splice(index, 1);
+                saveActivities();
+                renderEditScreen();
+            } else {
+                alert('Cannot delete the last activity in a category!');
+            }
+        }
+
+        // Add new activity
+        function addActivity(time) {
+            activities[time].push('New activity');
+            saveActivities();
+            renderEditScreen();
+            
+            // Focus on the new input
+            const listEl = document.getElementById(`edit-${time}`);
+            const inputs = listEl.querySelectorAll('input');
+            const lastInput = inputs[inputs.length - 1];
+            lastInput.focus();
+            lastInput.select();
+        }
+
+        // Select time and show activity
+        function selectTime(minutes) {
+            currentTime = minutes;
+            const activityList = activities[minutes];
+            const randomActivity = activityList[Math.floor(Math.random() * activityList.length)];
+            
+            // Update result screen
+            document.getElementById('activityTitle').textContent = randomActivity.toUpperCase();
+            document.getElementById('activityTime').textContent = minutes === 40 ? '40+ MINUTES' : `${minutes} MINUTE${minutes > 1 ? 'S' : ''}`;
+            
+            // Switch screens
+            showScreen('resultScreen');
+        }
+
+        // Reset to time selection
+        function resetApp() {
+            currentTime = null;
+            showScreen('timeScreen');
+        }
+
+        // Screen switching
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        // Initialize edit screen on load
+        renderEditScreen();
+    </script>
+</body>
+</html>
