@@ -14,18 +14,20 @@ Instead presents you with 5 time options (1, 5, 10, 20, or 40+ minutes) and rand
   <img src="screenshot-3-edit-mode.png" width="250" alt="Edit Mode Screen">
 </p>
 
-**Left**: Choose your available time from 1 to 40+ minutes  
-**Center**: Get a random activity suggestion with a back arrow button to return  
-**Right**: Edit mode with import/export, activity management, and delete buttons
+**Left**: Choose your available time from 1 to 40+ minutes (or add custom durations)  
+**Center**: Get a random activity suggestion with countdown timer and back arrow button  
+**Right**: Edit mode with import/export, custom time categories, and activity management
 
 ### Key Features
 
 - **Time-based activity selection**: Choose your available time and get a random activity suggestion
+- **Countdown timer**: Built-in timer with visual countdown and completion sound notification
 - **Fully offline**: Works without internet connection after first load
 - **Customizable**: Edit, add, or delete activities in each time category
+- **Dynamic time categories**: Add or remove custom time durations (e.g., 15, 30, 60 minutes)
 - **Import/Export**: Save your activity lists as text to backup or transfer between devices
 - **Progressive Web App**: Installable on mobile and desktop devices
-- **Persistent storage**: Your custom activities are saved locally
+- **Persistent storage**: Your custom activities and time categories are saved locally
 - **Clean design**: Solarized Light color scheme with Swiss brutalist aesthetics
 
 ## Quick Start
@@ -96,12 +98,20 @@ The HTML contains three main screens that are toggled via JavaScript:
 </div>
 
 <div class="screen" id="resultScreen">
-  <!-- Shows the selected activity with ANOTHER button and back arrow (←) at bottom-left -->
+  <!-- Shows the selected activity with:
+       - Countdown timer display (MM:SS format)
+       - START TIMER and RESET buttons
+       - ANOTHER button (hidden while timer is running)
+       - Back arrow (←) at bottom-left
+  -->
 </div>
 
 <div class="screen" id="editScreen">
   <!-- Edit mode: 
        - Import/Export textarea and buttons
+       - Add new time category input (1-999 minutes)
+       - Dynamic list of time categories (sorted numerically)
+       - Each category has DELETE TIME button
        - Lists of activities organized by time category 
        - Delete (🗑️) and Add buttons for each activity
   -->
@@ -119,8 +129,13 @@ The HTML contains three main screens that are toggled via JavaScript:
 - **Animations**: Staggered fade-in animations on load, hover effects with transforms and shadows
 
 **Key style classes**:
-- `.time-button`: The 5 main time selection cards
+- `.time-button`: The 5 main time selection cards (dynamically generated)
 - `.result-box`: Container for activity results
+- `.timer-display`: Timer container with border and background
+- `.timer-time`: Large countdown display (MM:SS format)
+- `.timer-controls`: Container for timer buttons
+- `.timer-btn`: Individual timer button (START/RESET)
+- `.timer-running`: Animation class for pulsing timer display
 - `.edit-toggle`: The discreet edit button (bottom-right, hidden on result screen)
 - `.back-button`: The back arrow button (bottom-left, shown only on result screen)
 - `.edit-section`: Edit mode interface
@@ -148,6 +163,9 @@ Activities are stored as an object with time durations as keys and arrays of act
 let activities = ...;          // Loaded from localStorage or defaults
 let currentTime = null;        // Currently selected time duration
 let isEditMode = false;        // Whether edit mode is active
+let timerInterval = null;      // setInterval reference for countdown
+let timeRemaining = 0;         // Seconds remaining on timer
+let timerDuration = 0;         // Total timer duration in seconds
 ```
 
 #### Core Functions
@@ -156,11 +174,14 @@ let isEditMode = false;        // Whether edit mode is active
 - Called when user clicks a time button
 - Randomly selects an activity from the corresponding array
 - Updates the result screen with the activity
+- Initializes timer display with selected duration
+- Clears any existing timer state
 - Hides the edit button and shows the back button
 - Switches to result screen
 
 **`resetApp()`**
 - Returns to time selection screen
+- Clears timer state and stops any running countdown
 - Shows edit button and hides back button
 - Resets currentTime state
 
@@ -202,6 +223,54 @@ let isEditMode = false;        // Whether edit mode is active
 - Validates format and required keys
 - Asks for confirmation before replacing existing data
 - Updates activities and re-renders edit screen
+
+**Timer Functions:**
+
+**`startTimer()`**
+- Starts countdown from selected time duration
+- Hides START button, shows RESET button
+- Hides ANOTHER button during countdown
+- Adds pulsing animation to timer display
+- Updates display every second
+
+**`resetTimer()`**
+- Stops the countdown
+- Resets timer to starting duration
+- Shows START button, hides RESET button
+- Shows ANOTHER button again
+- Removes pulsing animation
+
+**`timerComplete()`**
+- Called when countdown reaches 0:00
+- Plays three-tone completion sound
+- Shows "Time's up!" alert
+- Resets timer to start state
+- Shows ANOTHER button again
+
+**`playCompletionSound()`**
+- Uses Web Audio API to generate three beeps
+- Frequencies: 800Hz → 950Hz → 800Hz
+- Fallback for browsers without audio support
+
+**Dynamic Time Category Functions:**
+
+**`renderTimeButtons()`**
+- Dynamically generates time selection buttons
+- Sorts time categories numerically
+- Creates buttons with proper labels (MINUTE vs MINUTES)
+- Handles 40+ display for times >= 40 minutes
+
+**`addTimeCategory()`**
+- Validates input (1-999 minutes)
+- Checks for duplicate categories
+- Creates new category with default activity
+- Saves to localStorage and re-renders both screens
+
+**`deleteTimeCategory(time)`**
+- Prevents deletion of last category
+- Confirms before deleting
+- Removes category and all activities
+- Saves and re-renders both screens
 
 #### localStorage Usage
 
@@ -311,6 +380,106 @@ function importActivities() {
 - **Share**: Share custom activity lists with others
 - **Restore**: Keep default export to reset later
 - **Version control**: Save different activity sets for different contexts
+
+#### Timer System
+
+The timer feature provides a countdown functionality for each activity with visual and audio feedback.
+
+**Timer Flow**:
+
+1. User selects a time duration (e.g., 10 minutes)
+2. Activity is displayed with timer set to 10:00
+3. User clicks **START TIMER**
+4. Timer counts down every second (10:00 → 9:59 → ... → 0:00)
+5. Display pulses during countdown
+6. ANOTHER button is hidden (prevents distraction)
+7. User can click **RESET** to stop and restart
+8. When timer reaches 0:00:
+   - Three beeps play (800Hz → 950Hz → 800Hz)
+   - Alert shows "Time's up! 🎉"
+   - Timer resets to start state
+   - ANOTHER button reappears
+
+**Implementation Details**:
+
+```javascript
+// Timer uses setInterval for countdown
+timerInterval = setInterval(() => {
+  if (timeRemaining > 0) {
+    timeRemaining--;
+    updateDisplay();
+    
+    if (timeRemaining === 0) {
+      timerComplete();
+    }
+  }
+}, 1000);
+```
+
+**Audio System**:
+- Uses Web Audio API for cross-browser compatibility
+- Creates three oscillators with different frequencies
+- Each beep: 150ms duration with fade-out
+- Plays before alert to ensure audio is heard
+- Fallback for browsers without audio support
+
+**State Management**:
+- Timer state is cleared when changing activities
+- ANOTHER button visibility tied to timer state
+- Timer stops automatically on screen navigation
+- No pause/resume to keep interface simple
+
+#### Dynamic Time Categories
+
+Time categories are no longer hard-coded - users can add and remove them freely.
+
+**Adding Categories**:
+
+```javascript
+function addTimeCategory() {
+  const minutes = parseInt(input.value);
+  
+  // Validation
+  if (!minutes || minutes < 1 || minutes > 999) {
+    alert('Please enter a valid number');
+    return;
+  }
+  
+  // Create new category
+  activities[minutes] = ['New activity'];
+  saveActivities();
+  
+  // Re-render both screens
+  renderEditScreen();
+  renderTimeButtons();
+}
+```
+
+**Deleting Categories**:
+
+```javascript
+function deleteTimeCategory(time) {
+  // Prevent deletion of last category
+  if (Object.keys(activities).length <= 1) {
+    alert('Cannot delete the last time category!');
+    return;
+  }
+  
+  if (confirm('Delete category?')) {
+    delete activities[time];
+    saveActivities();
+    renderEditScreen();
+    renderTimeButtons();
+  }
+}
+```
+
+**Dynamic Rendering**:
+- Time selection buttons generated from `Object.keys(activities)`
+- Sorted numerically (1, 5, 10, 15, 20, 30, 40, 60...)
+- Automatic label formatting (MINUTE vs MINUTES)
+- Special handling for 40+ minutes display
+- Changes persist in localStorage
 
 ### 4. Service Worker (service-worker.js)
 
@@ -510,7 +679,13 @@ Before deploying changes:
 - [ ] Test on desktop browser
 - [ ] Test on mobile browser (iOS Safari, Android Chrome)
 - [ ] Test time selection → activity display flow
+- [ ] Test timer start → countdown → completion (including sound)
+- [ ] Test timer reset functionality
+- [ ] Test adding custom time categories (e.g., 15, 30, 60 minutes)
+- [ ] Test deleting time categories
+- [ ] Test that time buttons regenerate correctly
 - [ ] Test edit mode (add, edit, delete activities)
+- [ ] Test import/export functionality
 - [ ] Test offline mode (disconnect internet)
 - [ ] Test PWA installation
 - [ ] Verify icons display correctly on home screen
@@ -584,6 +759,26 @@ All modern browsers support PWAs and service workers.
 - **Import confirmation**: Make sure to click "OK" on the confirmation dialog
 - **Clipboard access**: Some browsers block `execCommand('copy')` - just copy manually from textarea
 
+### Timer Not Working
+
+**Problem**: Timer doesn't count down or completion sound doesn't play
+
+**Solution**:
+- **Timer stuck**: Click RESET and try starting again
+- **No sound**: Check browser audio permissions; some browsers require user interaction before playing audio
+- **Sound plays but is silent**: Check device volume and browser audio settings
+- **Timer continues after leaving**: This is expected - timer is cleared when changing screens or going back
+
+### Custom Time Categories Not Appearing
+
+**Problem**: Added time category doesn't show on main screen
+
+**Solution**:
+- Verify the time was added in edit mode (check if it appears in the edit list)
+- Ensure you clicked outside edit mode or clicked DONE
+- Check localStorage isn't full (rare, but possible)
+- Try refreshing the page - categories should persist
+
 ## Security Considerations
 
 - **No backend**: All data stays on device
@@ -595,11 +790,14 @@ All modern browsers support PWAs and service workers.
 
 - Multiple activity lists/profiles
 - Activity history tracking
+- Timer pause/resume functionality
+- Custom timer sounds or music
 - Difficulty ratings for activities
 - Random time suggestion ("I don't know how much time I have")
 - Dark mode toggle
 - Activity categories/tags
 - Shareable activity lists (via URL encoding)
+- Statistics and analytics (most used activities, time spent)
 
 ## License
 
@@ -613,5 +811,5 @@ This code is provided as-is for personal or commercial use.
 
 ---
 
-**Last Updated**: December 2024
-**Version**: 1.0.0
+**Last Updated**: December 2025  
+**Version**: 1.1.0
