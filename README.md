@@ -6,6 +6,18 @@ A minimalist Progressive Web App (PWA) that helps you decide what to do based on
 
 Instead presents you with 5 time options (1, 5, 10, 20, or 40+ minutes) and randomly suggests an activity from a curated list appropriate for that time duration. The app works completely offline once installed and allows users to customize their activity lists.
 
+### Screenshots
+
+<p align="center">
+  <img src="screenshot-1-time-selection.png" width="250" alt="Time Selection Screen">
+  <img src="screenshot-2-activity-result.png" width="250" alt="Activity Result Screen">
+  <img src="screenshot-3-edit-mode.png" width="250" alt="Edit Mode Screen">
+</p>
+
+**Left**: Choose your available time from 1 to 40+ minutes  
+**Center**: Get a random activity suggestion with options to get another or restart  
+**Right**: Edit mode with import/export, activity management, and delete buttons
+
 ### Key Features
 
 - **Time-based activity selection**: Choose your available time and get a random activity suggestion
