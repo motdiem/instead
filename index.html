@@ -330,6 +330,7 @@
             z-index: 1000;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             opacity: 0.4;
+            white-space: nowrap;
         }
 
         .edit-toggle:hover {
@@ -342,6 +343,10 @@
             color: var(--bg-primary);
             border-color: var(--accent);
             opacity: 1;
+        }
+
+        .edit-toggle.hidden {
+            display: none;
         }
 
         .edit-section {
@@ -424,6 +429,13 @@
 
             button {
                 width: 100%;
+            }
+
+            .edit-toggle {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+                bottom: 15px;
+                right: 15px;
             }
         }
     </style>
@@ -672,6 +684,9 @@
             document.getElementById('activityTitle').textContent = randomActivity.toUpperCase();
             document.getElementById('activityTime').textContent = minutes === 40 ? '40+ MINUTES' : `${minutes} MINUTE${minutes > 1 ? 'S' : ''}`;
             
+            // Hide edit button on result screen
+            document.getElementById('editToggle').classList.add('hidden');
+            
             // Switch screens
             showScreen('resultScreen');
         }
@@ -679,6 +694,8 @@
         // Reset to time selection
         function resetApp() {
             currentTime = null;
+            // Show edit button again
+            document.getElementById('editToggle').classList.remove('hidden');
             showScreen('timeScreen');
         }
 
