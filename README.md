@@ -15,7 +15,7 @@ Instead presents you with 5 time options (1, 5, 10, 20, or 40+ minutes) and rand
 </p>
 
 **Left**: Choose your available time from 1 to 40+ minutes  
-**Center**: Get a random activity suggestion with options to get another or restart  
+**Center**: Get a random activity suggestion with a back arrow button to return  
 **Right**: Edit mode with import/export, activity management, and delete buttons
 
 ### Key Features
@@ -96,7 +96,7 @@ The HTML contains three main screens that are toggled via JavaScript:
 </div>
 
 <div class="screen" id="resultScreen">
-  <!-- Shows the selected activity with ANOTHER/RESTART buttons -->
+  <!-- Shows the selected activity with ANOTHER button and back arrow (←) at bottom-left -->
 </div>
 
 <div class="screen" id="editScreen">
@@ -122,6 +122,7 @@ The HTML contains three main screens that are toggled via JavaScript:
 - `.time-button`: The 5 main time selection cards
 - `.result-box`: Container for activity results
 - `.edit-toggle`: The discreet edit button (bottom-right, hidden on result screen)
+- `.back-button`: The back arrow button (bottom-left, shown only on result screen)
 - `.edit-section`: Edit mode interface
 - `.edit-item`: Individual activity row with input and delete button (🗑️ emoji)
 
@@ -155,12 +156,12 @@ let isEditMode = false;        // Whether edit mode is active
 - Called when user clicks a time button
 - Randomly selects an activity from the corresponding array
 - Updates the result screen with the activity
-- Hides the edit button
+- Hides the edit button and shows the back button
 - Switches to result screen
 
 **`resetApp()`**
 - Returns to time selection screen
-- Shows edit button again
+- Shows edit button and hides back button
 - Resets currentTime state
 
 **`toggleEditMode()`**
@@ -602,7 +603,7 @@ All modern browsers support PWAs and service workers.
 
 ## License
 
-This code is provided as-is for personal or commercial use under the MIT License.
+This code is provided as-is for personal or commercial use.
 
 ## Credits
 
@@ -612,5 +613,5 @@ This code is provided as-is for personal or commercial use under the MIT License
 
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: December 2024
 **Version**: 1.0.0
